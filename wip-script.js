@@ -53,10 +53,18 @@ function getStatusCodes(keywords){
       var url = uniqueURLs[i];
       var response = UrlFetchApp.fetch(url, HTTP_OPTIONS)
       var statusCode = response.getResponseCode();
-      if (statusCode === 301){
-        var redirectedURL = response.getHeaders().Location;
-        var statusCodeObject = {URL: url, statusCode: statusCode, redirectedURL: redirectedURL};
-        statusCodes.push(statusCodeObject);
+      if (statusCode === 301 || statusCode === 302 || statusCode === 307){
+        try {
+          Logger.log(url)
+          Logger.log(statusCode)
+          var redirectedURL = getRedirect(url);
+          Logger.log(redirectedURL)
+          var statusCodeObject = {URL: url, statusCode: statusCode, redirectedURL: redirectedURL};
+          statusCodes.push(statusCodeObject);
+        }
+        catch(err){
+          Logger.log(url + " could not be followed")
+        }
       }
     }
   }
@@ -71,6 +79,20 @@ function uniqueArray(arr) {
             a.push(arr[i]);
     return a;
 }
+
+//RUNS IN FUNCTION 2, gets redirects until the last one (if multiple redirects occur)
+function getRedirect(url) {
+  var response = UrlFetchApp.fetch(url, {'followRedirects': false, 'muteHttpExceptions': false});
+  var redirectUrl = response.getHeaders()['Location']; // undefined if no redirect
+  var responseCode = response.getResponseCode();
+  if (redirectUrl) {                                   
+    var nextRedirectUrl = getRedirect(redirectUrl);    
+    return nextRedirectUrl;
+  }
+  else {                                               
+    return url;
+  }
+}  
 
 //RUNS 3
 function match(keywords, statusCodes){  
